@@ -20,8 +20,35 @@ class Arkham:
         self.type_code_sort = {'investigator': 0, 'asset': 1, 'event': 2, 'skill': 3, 'scenario': 4, 'treachery': 5,
                                'enemy': 6}
         self.query_corrections = {"mississippi manatee": "leo de luca",
-            "manatee": "leo de luca",
-            "ordineu": "scavenging"
+"manatee": "leo de luca",
+"ordineu": "scavenging",
+"mylan": "milan",
+"that same corpse again": "rotting remains",
+"mr. pawterson": "cherished keepsake",
+"bill": "william yorick",
+"sean": "abandoned and alone",
+"thud": "stunning blow",
+"old sparky": "lightning gun",
+"bmoc": "peter sylvestre",
+"quiche": "emergency cache",
+"the stranger": "the man in the pallid mask",
+"pills": "painkillers",
+"opium": "smoking pipe",
+"dttf": "drawn to the flame",
+"doot": "jim's trumpet",
+"free xp": "delve too deep",
+"this is fine": "deny existence",
+":rat: lead": "eat lead",
+"mcdog3": "guard dog",
+"nick": "shotgun",
+"useless": "springfield",
+"god": "wendy adams",
+"brandon": "preston fairmont",
+"dapper as fuck": "preston",
+"ian": "maniac",
+"sean's waifu": "diana stanley",
+"baby eaters": "drawn to the flame",
+"who do you work for": "interrogate"
             }
 
     def refresh_ah_api(self):
@@ -78,15 +105,18 @@ class Arkham:
 
     @commands.command(aliases=['arkhamhelp'])
     async def ahhelp(self):
-        m_response = "Hi! I'm your discord's Arkham bot. Here's what I can do:"
+        m_response = "Hi! I'm your discord's Arkham bot. Here's what I can do:\n"
         m_response += "!ah [name] - Player card search\n"
         m_response += "!ahe [name] - Encounter card search\n"
         m_response += "!ahb [name] - Search for card backsides\n"
         m_response += "!ahX [name] - Player card search with level X\n"
         m_response += "!aha [name] - Search through all cards and post up to 5\n"
+        m_response += "All !ah commands also allow a [name]~[subname] format, for cards where two or more options exist\n"
+        m_response += "!ahfaq, !ahefaq, and !ahfaqX will get you the faq for the corresponding card\n"
         m_response += "!namelist - list all the current card nicknames\n"
         m_response += "!name [nickname]:[actual name] - add a card nickname.\n Note that there should be no spaces between the nickname, colon, and actual name\n"
-        m_response += "!deletename [name] - remove the nickname you've listed, if it exists"
+        m_response += "!deletename [name] - remove the nickname you've listed, if it exists."
+
         await self.bot.say(m_response[:2000])
 
     @commands.command(aliases=['ahd'])
@@ -107,7 +137,7 @@ class Arkham:
         m_response = ""
 
         for keys in self.query_corrections.keys():
-            m_response += keys + ':' + self.query_corrections[keys]
+            m_response += keys + ':' + self.query_corrections[keys] +"\n"
         await self.bot.say(m_response[:2000])
 
 
@@ -116,15 +146,18 @@ class Arkham:
     async def name(self,*args):
         """Arkham Horror card nicknaming"""
         m_response = ""
-        ctx = ' '.join(args)
-        if ctx.find(":") == -1:
-            m_response += "Sorry, but I don't understand. Please form your nickname command as (Nickname):(Card Name)"
+        nickname = ' '.join(args).lower()
+        if nickname.find(":") == -1:
+            m_response += "Sorry, but I don't understand. Please form your nickname command as (nickname):(card name)"
         else:
-            m_key,m_name = ctx.split(":", 1)
-
-            m_response += m_key + " now means "
-            m_response += m_name
-            self.query_corrections.update({m_key:m_name})
+            m_key,m_name = nickname.split(":", 1)
+            m_cards = [c for c in self.ah_api_p if c['name'].lower().__contains__(m_key)]
+            if m_cards:
+                m_response += "That's already a card name. I won't be made to do evil again!"
+            else:
+                m_response += m_key + " now means "
+                m_response += m_name
+                self.query_corrections.update({m_key:m_name})
 
         await self.bot.say(m_response[:2000])
 
@@ -144,9 +177,10 @@ class Arkham:
 
 
 
-    @commands.command(aliases=['arkham', 'arkhamhorror', 'ahe', 'ahb', 'ah1', 'ah2', 'ah3', 'ah4', 'ah5', 'aha', 'ahfaq'], pass_context=True)
+    @commands.command(aliases=['arkham', 'arkhamhorror', 'ahe', 'ahb', 'ah1', 'ah2', 'ah3', 'ah4', 'ah5', 'aha', 'ahfaq', 'ahefaq', 'ahfaq1', 'ahfaq2', 'ahfaq3', 'ahfaq4', 'ahfaq5'], pass_context=True)
     async def ah(self, ctx):
         """Arkham Horror card lookup"""
+        subexists = False
         m_query = ' '.join(ctx.message.content.split()[1:]).lower()
         img = 'imagesrc'
         faq = False
@@ -157,6 +191,9 @@ class Arkham:
         # Auto-link some images instead of other users' names
         query_redirects = {
             }
+        if m_query.find("~") >= 0:
+            m_query,m_subquery = m_query.split("~",1)
+            subexists = True
         m_response = ""
         if m_query in query_redirects.keys():
             m_response = query_redirects[m_query]
@@ -167,13 +204,15 @@ class Arkham:
             m_response += "!ahb [name] - Search for card backsides\n"
             m_response += "!ahX [name] - Player card search with level X\n"
             m_response += "!aha [name] - Search through all cards and post up to 5\n"
-            m_response += "!ahfaq [name] - Search through all cards and post the FAQ"
+            m_response += "!ahfaq [name] - Search through all cards and post the FAQ\n"
+            m_response += "All !ah commands also allow a [name]~[subname] format, for cards where two or more options exist\n"
+            m_response += "!ahfaq, !ahefaq, and !ahfaqX will get you the faq for the corresponding card\n"
         else:
             # Otherwise find and handle card names
             if not self.init_api:
                 self.refresh_ah_api()
 
-            if ctx.invoked_with == "ahe":
+            if ctx.invoked_with.__contains__("ahe"):
                 # search encounter cards
                 m_cards = [c for c in self.ah_api if c['name'].lower().__contains__(m_query) and "spoiler" in c]
                 if not m_cards:
@@ -194,15 +233,14 @@ class Arkham:
             elif ctx.invoked_with == "aha":
                 # search all cards
                 m_cards = [c for c in self.ah_api if c['name'].lower().__contains__(m_query)]
-            elif ctx.invoked_with == "ahfaq":
-                #search all cards
-                m_cards = [c for c in self.ah_api_p if c['name'].lower().__contains__(m_query)]
-
-                #set FAQ bool.
             else:
                 # search player cards
                 m_cards = [c for c in self.ah_api_p if c['name'].lower().__contains__(m_query)]
 
+            if subexists:
+                m_check = [c for c in m_cards if c['subname'].lower().__contains__(m_subquery)]
+                if m_check:
+                    m_cards = m_check
             for c in m_cards:
                 if m_query == c['name'].lower():
                     # if exact name match, post only the one card
@@ -211,18 +249,21 @@ class Arkham:
             if len(m_cards) == 1:
                 try:
                     m_response += "http://arkhamdb.com" + m_cards[0][img]
-                    if ctx.invoked_with == "ahfaq":
+                    if ctx.invoked_with.__contains__("faq"):
                         #Print it
                         holder = requests.get('http://arkhamdb.com/api/public/faq/' + m_cards[0]["code"]).json()
                         if not holder:
                             m_response = "No FAQ exists for this card. Perhaps, in another reality, it did?"
                         else:
                             m_response = holder[0]['text'];
-                            m_response = re.sub("[\]].*?[\)]", "", m_response)
+                            m_response = re.sub("<span class=", "", m_response)
+                            m_response = re.sub("icon-","",m_response)
+                            m_response = re.sub("></span>", "", m_response)
+                            #_response = re.sub("[\]].*?[\)]", "", m_response)
                             m_response = re.sub("[\[\]]", "", m_response)
-                            m_response = re.sub("[\<].*?[\-]","", m_response)
-                            m_response = re.sub("\"></span>", "", m_response)
-                            m_response = re.sub("[\]].*?[\]]", "", m_response)
+                            #m_response = re.sub("[\<].*?[\-]","", m_response)
+                            #m_response = re.sub("[\>].*?[\>]", "", m_response)
+                            #m_response = re.sub("[\]].*?[\]]", "", m_response)
 
                             
 
