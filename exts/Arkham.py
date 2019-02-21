@@ -44,11 +44,20 @@ class Arkham:
 "useless": "springfield",
 "god": "wendy adams",
 "brandon": "preston fairmont",
-"dapper as fuck": "preston",
 "ian": "maniac",
 "sean's waifu": "diana stanley",
 "baby eaters": "drawn to the flame",
-"who do you work for": "interrogate"
+"who do you work for": "interrogate",
+"acid": "strange~acid",
+"flash gordon": "finn edwards",
+"2spooky4me": "i'm outta here",
+"yeet": "act of desperation",
+"campaign ender": "crumbling precipice",
+"mack": "mob enforcer",
+"lolgun": "springfield",
+"freezing variant": "strange solution~freezing variant",
+"vial of snot": "strange solution",
+"brown jenkin's illegitimate family": "swarm of rats"
             }
 
     def refresh_ah_api(self):
@@ -113,23 +122,44 @@ class Arkham:
         m_response += "!aha [name] - Search through all cards and post up to 5\n"
         m_response += "All !ah commands also allow a [name]~[subname] format, for cards where two or more options exist\n"
         m_response += "!ahfaq, !ahefaq, and !ahfaqX will get you the faq for the corresponding card\n"
+        m_response += "!ahd [deck number] - Print a publicly available ArkhamDB decklist."
+        m_response += "!ahdmine for a unpublished but public deck, !ahdyours for a published deck"
         m_response += "!namelist - list all the current card nicknames\n"
         m_response += "!name [nickname]:[actual name] - add a card nickname.\n Note that there should be no spaces between the nickname, colon, and actual name\n"
         m_response += "!deletename [name] - remove the nickname you've listed, if it exists."
 
+
         await self.bot.say(m_response[:2000])
 
-    @commands.command(aliases=['ahd'])
-    async def ahdeck(self, *, decklist: str):
+    @commands.command(aliases=['ahd', 'ahdmine', 'ahdyours', 'ahyours', 'ahmine', 'ahdm', 'ahdy', 'ahm', 'ahy' ], pass_context=True)
+    async def ahdeck(self, ctx):
         """Arkham Horror deck listing"""
-        m_decklist = unidecode(decklist.lower())
-        re_decklist_id = re.search(r"(https://arkhamdb\.com/decklist/view/)(\d+)(/.*)", m_decklist)
         m_response = ""
-        if re_decklist_id is None or re_decklist_id.group(2) is None:
-            m_response += "I see: \"{0}\", but I don't understand\n".format(m_decklist)
-        else:
-            m_response += self.deck_parse(re_decklist_id.group(2))
+        code = ' '.join(ctx.message.content.split()[1:]).lower()
+        try:
+            if (ctx.invoked_with.__contains__('ahdm') or ctx.invoked_with.__contains__('ahm')):
+                deck = requests.get("https://arkhamdb.com/api/public/deck/" + code).json()
+                m_response += deck["name"] +" - " + deck["investigator_name"] + "\n" + "https://arkhamdb.com/deck/view/" + code + "\n"
+            else:
+                deck = requests.get("https://arkhamdb.com/api/public/decklist/" + code).json()
+                m_response += deck["name"] +" - " + deck["investigator_name"] + "\n" + "https://arkhamdb.com/decklist/view/" + code + "\n"
+            m_holder =""
+            for cad in deck["slots"]:
+                m_response += str(deck["slots"][cad]) + "x "
+                m_response += next((c for c in self.ah_api if c["code"] == cad), None)["name"] + "\n"
+        except ValueError:
+            m_response += "I can only get you the deck by public number. Mystics and Guardians require setup, you know."
         await self.bot.say(m_response[:2000])
+       # m_decklist = unidecode(decklist.lower())
+       # re_decklist_id = re.search(r"(https://arkhamdb\.com/decklist/view/)(\d+)(/.*)", m_decklist)
+       # m_response = ""
+       # if re_decklist_id is None or re_decklist_id.group(2) is None:
+       #     m_response += "I see: \"{0}\", but I don't understand\n".format(m_decklist)
+       # else:
+       #     m_response += self.deck_parse(re_decklist_id.group(2))
+
+
+
 
     @commands.command(aliases=['listnames', 'ln'])
     async def namelist(self):
